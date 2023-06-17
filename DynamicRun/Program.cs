@@ -1,34 +1,31 @@
-﻿using DynamicRun.Builder;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using shg.dynRunner.Application.Interfaces;
+using shg.dynRunner.Infrastructure.Services;
 using System;
-using System.IO;
-using System.Reactive.Linq;
+using System.Threading.Tasks;
 
 namespace DynamicRun
 {
     class Program
     {
-        static void Main()
+        public static async Task Main(string[] args)
         {
-            var sourcesPath = Path.Combine(Environment.CurrentDirectory, "Sources");
-
-            Console.WriteLine($"Running from: {Environment.CurrentDirectory}");
-            Console.WriteLine($"Sources from: {sourcesPath}");
-            Console.WriteLine("Modify the sources to compile and run it!");
-
-            var compiler = new Compiler();
-            var runner = new Runner();
-
-            using (var watcher = new ObservableFileSystemWatcher(c => { c.Path = @$".{Path.DirectorySeparatorChar}Sources"; }))
-            {
-                var changes = watcher.Changed.Throttle(TimeSpan.FromSeconds(.5)).Where(c => c.FullPath.EndsWith(@"DynamicProgram.cs")).Select(c => c.FullPath);
-
-                changes.Subscribe(filepath => runner.Execute(compiler.Compile(filepath), new[] { "France" }));
-
-                watcher.Start();
-
-                Console.WriteLine("Press any key to exit!");
-                Console.ReadLine();
-            }
+            await CreateHostBuilder(args)
+                .RunConsoleAsync();
         }
+
+        private static IHostBuilder CreateHostBuilder(string[] args) =>
+            Host.CreateDefaultBuilder(args)
+                .UseConsoleLifetime()
+                .ConfigureLogging(builder => builder.SetMinimumLevel(LogLevel.Warning))
+                .ConfigureServices((hostContext, services) =>
+                {
+                    //services.Configure<MyServiceOptions>(hostContext.Configuration);
+                    services.AddTransient<IGetDynCodes, ExampleGetDynCodes>();
+                    services.AddHostedService<DynRunnerHostedService>();
+                    services.AddSingleton(Console.Out);
+                });
     }
 }
