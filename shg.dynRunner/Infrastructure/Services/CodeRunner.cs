@@ -6,30 +6,13 @@ namespace shg.dynRunner.Infrastructure.Services
 {
     internal static class CodeRunner
     {
-        public static void Execute(byte[] compiledAssembly, string[] args)
-        {
-            var assemblyLoadContextWeakRef = LoadAndExecute(compiledAssembly, args);
-
-            for (var i = 0; i < 8 && assemblyLoadContextWeakRef.IsAlive; i++)
-            {
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
-            }
-
-            Console.WriteLine(assemblyLoadContextWeakRef.IsAlive ? "Unloading failed!" : "Unloading success!");
-        }
-
-        public static Result<T> Execute<T>(byte[] compiledAssembly, string className, string methodName, object[]? methodParams)
+        public static async Task<Result<T>> Execute<T>(byte[] compiledAssembly, string className, string methodName, object[]? methodParams)
         {
             try
             {
-                var result = LoadAndExecute<T>(compiledAssembly, className, methodName, methodParams);
+                var result = await LoadAndExecute<T>(compiledAssembly, className, methodName, methodParams);
                 var (assemblyLoadContextWeakRef, value) = result;
-                for (var i = 0; i < 8 && assemblyLoadContextWeakRef.IsAlive; i++)
-                {
-                    GC.Collect();
-                    GC.WaitForPendingFinalizers();
-                }
+                CallGarbageCollector(assemblyLoadContextWeakRef);
                 return Result.Ok<T>(value);
             }
             catch(Exception ex)
@@ -38,29 +21,18 @@ namespace shg.dynRunner.Infrastructure.Services
             }
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        private static WeakReference LoadAndExecute(byte[] compiledAssembly, string[] args)
+        private static async Task CallGarbageCollector(WeakReference assemblyLoadContextWeakRef)
         {
-            using (var asm = new MemoryStream(compiledAssembly))
+            for (var i = 0; i < 8 && assemblyLoadContextWeakRef.IsAlive; i++)
             {
-                var assemblyLoadContext = new SimpleUnloadableAssemblyLoadContext();
-
-                var assembly = assemblyLoadContext.LoadFromStream(asm);
-
-                var entry = assembly.EntryPoint;
-
-                _ = entry != null && entry.GetParameters().Length > 0
-                    ? entry.Invoke(null, new object[] { args })
-                    : entry?.Invoke(null, null);
-
-                assemblyLoadContext.Unload();
-
-                return new WeakReference(assemblyLoadContext);
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
             }
+            return;
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static (WeakReference, T) LoadAndExecute<T>(byte[] compiledAssembly, string className, string methodName, object[]? methodParams)
+        private static async Task<(WeakReference, T)> LoadAndExecute<T>(byte[] compiledAssembly, string className, string methodName, object[]? methodParams)
         {
             using (var asm = new MemoryStream(compiledAssembly))
             {

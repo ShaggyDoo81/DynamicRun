@@ -45,7 +45,7 @@ namespace shg.dynRunner.Infrastructure.Services
                 return Result.Fail<T>("Code identifier not found");
             }
 
-            var executeCode = CodeRunner.Execute<T>(code.Code, code.ClassName, functionName, parameters);
+            var executeCode = await CodeRunner.Execute<T>(code.Code, code.ClassName, functionName, parameters);
             if(executeCode.IsSuccess)
                 return Result.Ok<T>(executeCode.Value);
             else
