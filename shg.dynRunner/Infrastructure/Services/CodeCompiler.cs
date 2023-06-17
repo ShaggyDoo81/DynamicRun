@@ -8,12 +8,6 @@ namespace shg.dynRunner.Infrastructure.Services
 {
     internal class CodeCompiler
     {
-        public static Result<byte[]> Compile(string filepath)
-        {
-            var sourceCode = File.ReadAllText(filepath);
-            return CompileCodeFromString(sourceCode);
-        }
-
         public static Result<byte[]> CompileSourceCode(string sourceCode, string identifier, List<Type> additionalTypes)
         {
             return CompileCodeFromString(sourceCode, identifier, additionalTypes);
