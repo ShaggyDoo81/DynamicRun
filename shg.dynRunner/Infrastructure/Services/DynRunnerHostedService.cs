@@ -37,6 +37,22 @@ namespace shg.dynRunner.Infrastructure.Services
             return;
         }
 
+        public async Task<Result<T>> ExecuteCode<T>(string identifier, string functionName, object[]? parameters)
+        { 
+            var code = _compiledCodes.FirstOrDefault(x => x.Identifier.Equals(identifier, StringComparison.InvariantCultureIgnoreCase));
+            if (code is null)
+            {
+                return Result.Fail<T>("Code identifier not found");
+            }
+
+            var executeCode = CodeRunner.Execute<T>(code.Code, code.ClassName, functionName, parameters);
+            if(executeCode.IsSuccess)
+                return Result.Ok<T>(executeCode.Value);
+            else
+                return Result.Fail<T>(executeCode.Errors);
+
+        }
+
         private async Task LoadCode(DynCodeData code)
         {
             var existingCode = _compiledCodes.FirstOrDefault(x => x.Identifier == code.Identifier);
@@ -51,6 +67,7 @@ namespace shg.dynRunner.Infrastructure.Services
                         var compilationCode = getCompilationCode.Value;
                         existingCode.Code = compilationCode;
                         existingCode.CompilationTime = DateTime.Now;
+                        existingCode.ClassName = code.ClassName;
                     }
                     else
                     {
@@ -90,6 +107,7 @@ namespace shg.dynRunner.Infrastructure.Services
                     Identifier = code.Identifier,
                     Code = compilationCode,
                     CompilationTime = DateTime.Now,
+                    ClassName = code.ClassName,
                     LastExecutionTime = code.UpdatedTime,
                 });
             }

@@ -1,0 +1,35 @@
+﻿@page "/"
+@using shg.dynRunner.Infrastructure.Services;
+@inject DynRunnerHostedService dynRunner
+<PageTitle>Index</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Hello, world!</MudText>
+<MudText Class="mb-8">Welcome to your new app, powered by MudBlazor!</MudText>
+<MudAlert Severity="Severity.Normal">You can find documentation and examples on our website here: <MudLink Href="https://mudblazor.com" Typo="Typo.body2" Color="Color.Inherit"><b>www.mudblazor.com</b></MudLink></MudAlert>
+
+<MudText>@_prueba</MudText>
+
+<MudButton OnClick="@Ejecutar">Ejecutar Sin Parámetros</MudButton>
+
+<MudText>@_prueba2</MudText>
+
+<MudButton OnClick="@EjecutarConParams">Ejecutar Con Parámetros</MudButton>
+
+@code {
+    string _prueba = "";
+    string _prueba2 = "";
+
+    public async Task Ejecutar()
+    {
+        var result = await dynRunner.ExecuteCode<string>("ImplementClass", "GetName", null);
+        _prueba = result.IsSuccess ? $"OK: {result.Value}" : $"KO: {result.Errors.FirstOrDefault().Message}";
+    }
+
+    public async Task EjecutarConParams()
+    {
+        var result = await dynRunner.ExecuteCode<string>("ImplementClassWithoutInterface", "GetName", new object[] { "José", "Moralo" });
+        _prueba2 = result.IsSuccess ? $"OK: {result.Value}" : $"KO: {result.Errors.FirstOrDefault().Message}";
+    }
+
+    
+}
