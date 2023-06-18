@@ -1,4 +1,5 @@
 ﻿@page "/"
+@using shg.dynRunner.Application.Models;
 @using shg.dynRunner.Infrastructure.Services;
 @inject DynRunnerHostedService dynRunner
 <PageTitle>Index</PageTitle>
@@ -14,10 +15,33 @@
 <MudText>@_prueba2</MudText>
 
 <MudButton OnClick="@EjecutarConParams">Ejecutar Con Parámetros</MudButton>
+<MudButton OnClick="@(() => InfoMetodo("ImplementClassWithoutInterface"))">Dame la información del método</MudButton>
+@if (_classData is not null)
+{
+    @foreach (DynClass cl in _classData)
+    {
+        <MudText>@cl.ClassName</MudText>
+        <ul>
+            @foreach(var method in cl.Methods)
+            {
+                <li>@method.Name</li>
+                <ul>
+                    <li>Return value: @(method.ReturnType?.ToString() ?? "void")</li>
+                    @foreach(var param in method.Parameters)
+                    {
+                        <li>Parameter @param.Name of type @param.Type.ToString()</li>
+                    } 
+                </ul>
+            }
+        </ul>
+    }
+}
 
 @code {
     string _prueba = "";
     string _prueba2 = "";
+
+    List<DynClass>? _classData = null;
 
     public async Task Ejecutar()
     {
@@ -31,5 +55,9 @@
         _prueba2 = result.IsSuccess ? $"OK: {result.Value}" : $"KO: {result.Errors.FirstOrDefault().Message}";
     }
 
-    
+    public async Task InfoMetodo(string metodo)
+    {
+        var result = await dynRunner.GetCodeClasses(metodo);
+        _classData = result.IsSuccess ? result.Value : null;
+    }
 }

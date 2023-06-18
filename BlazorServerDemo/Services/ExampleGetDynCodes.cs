@@ -18,12 +18,14 @@ namespace BlazorServerDemo.Services
                 },
                 code: @"using shg.OtherLib;
                         using System.Threading.Tasks;
-
-                        public class ImplementClass : IImplementation
+                        namespace Custom.ImplementClass
                         {
-                            public async Task<string> GetName()
+                            public class ImplementClass : IImplementation
                             {
-                                return ""Jose"";
+                                public async Task<string> GetName()
+                                {
+                                    return ""Jose"";
+                                }
                             }
                         }");
             var code2 = new DynCodeData(identifier: "ImplementClassWithoutInterface",
@@ -34,6 +36,7 @@ namespace BlazorServerDemo.Services
                 },
                 code: @"using shg.OtherLib;
                         using System.Threading.Tasks;
+                        namespace Custom.ImplementClassWithoutInterface;
 
                         public class ImplementClassWithoutInterface
                         {

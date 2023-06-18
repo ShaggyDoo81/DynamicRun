@@ -6,6 +6,7 @@
         internal string? ClassName { get; set; }
         internal DateTime? CompilationTime { get; set; }
         internal DateTime? LastExecutionTime { get; set; }
-        internal byte[]? Code { get; set; }
+        internal byte[]? CompiledCode { get; set; }
+        internal List<DynClass> Classes { get; set; }
     }
 }

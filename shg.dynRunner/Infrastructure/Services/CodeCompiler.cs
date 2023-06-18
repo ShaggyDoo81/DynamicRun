@@ -2,6 +2,8 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
+using shg.dynRunner.Application.Models;
+using System.Collections;
 using System.Reflection;
 
 namespace shg.dynRunner.Infrastructure.Services
@@ -55,12 +57,46 @@ namespace shg.dynRunner.Infrastructure.Services
                 .ForEach(a => references.Add(MetadataReference.CreateFromFile(Assembly.Load(a).Location)));
 
             var dllName = identifier ?? "Default.dll";
-            return CSharpCompilation.Create(dllName,
+            var compilation = CSharpCompilation.Create(dllName,
                 new[] { parsedSyntaxTree },
                 references: references,
                 options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary,
                     optimizationLevel: OptimizationLevel.Release,
                     assemblyIdentityComparer: DesktopAssemblyIdentityComparer.Default));
+            var analyseClasses = AnalyseClasses(compilation);
+            return compilation;
+        }
+
+        public static Result<List<DynClass>> AnalyseClasses(CSharpCompilation compilation) //byte[] compiledCode)
+        {
+            //MetadataReference metadataReference = MetadataReference.CreateFromImage(compiledCode);
+            //Compilation compilation = CSharpCompilation.Create("MyCompilation", references: new[] { metadataReference });
+            INamespaceSymbol globalNamespace = compilation.GlobalNamespace;
+            IEnumerable<INamedTypeSymbol> classes = globalNamespace.GetNamespaceMembers().SelectMany(x => x.GetTypeMembers());
+
+            var classList = new List<DynClass>();
+            foreach (INamedTypeSymbol classSymbol in classes)
+            {
+                IEnumerable<IMethodSymbol> publicMethods = classSymbol.GetMembers().OfType<IMethodSymbol>().Where(m => m.DeclaredAccessibility == Accessibility.Public);
+
+                classList.Add(new DynClass
+                {
+                    ClassName = classSymbol.Name,
+                    Methods = publicMethods.Select(x => new DynMethod
+                    {
+                        Name = x.Name,
+                        ReturnType = x.ReturnsVoid ? null : x.ReturnType.GetType(),
+                        Parameters = x.Parameters.Select(y => new DynParameter
+                        {
+                            Name = y.Name,
+                            Type = y.Type.GetType(),
+
+                        }).ToList()
+                    }).ToList()
+                });
+            }
+
+            return Result.Ok(classList);
         }
     }
 }

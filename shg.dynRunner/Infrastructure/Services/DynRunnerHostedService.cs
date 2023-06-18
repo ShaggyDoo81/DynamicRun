@@ -3,6 +3,7 @@ using Microsoft.Extensions.Hosting;
 using shg.dynRunner.Application.Events;
 using shg.dynRunner.Application.Interfaces;
 using shg.dynRunner.Application.Models;
+using System.Collections.Generic;
 
 namespace shg.dynRunner.Infrastructure.Services
 {
@@ -37,15 +38,29 @@ namespace shg.dynRunner.Infrastructure.Services
             return;
         }
 
+        private DynCompiledCode? GetCodeById(string identifier)
+        {
+            return _compiledCodes.FirstOrDefault(x => x.Identifier.Equals(identifier, StringComparison.InvariantCultureIgnoreCase));
+        }
+
+        public async Task<Result<List<DynClass>>> GetCodeClasses(string identifier)
+        {
+            //var code = GetCodeById(identifier);
+            //if (code is null)
+                return Result.Fail<List<DynClass>>("Code identifier not found");
+            //else
+            //    return CodeCompiler.AnalyseClasses(code.CompiledCode);
+        }
+
         public async Task<Result<T>> ExecuteCode<T>(string identifier, string functionName, object[]? parameters)
         { 
-            var code = _compiledCodes.FirstOrDefault(x => x.Identifier.Equals(identifier, StringComparison.InvariantCultureIgnoreCase));
+            var code = GetCodeById(identifier);
             if (code is null)
             {
                 return Result.Fail<T>("Code identifier not found");
             }
 
-            var executeCode = await CodeRunner.Execute<T>(code.Code, code.ClassName, functionName, parameters);
+            var executeCode = await CodeRunner.Execute<T>(code.CompiledCode, code.ClassName, functionName, parameters);
             if(executeCode.IsSuccess)
                 return Result.Ok<T>(executeCode.Value);
             else
@@ -65,9 +80,11 @@ namespace shg.dynRunner.Infrastructure.Services
                     if (getCompilationCode.IsSuccess)
                     {
                         var compilationCode = getCompilationCode.Value;
-                        existingCode.Code = compilationCode;
+                        //var classInfo = CodeCompiler.AnalyseClasses(compilationCode);
+                        existingCode.CompiledCode = compilationCode;
                         existingCode.CompilationTime = DateTime.Now;
                         existingCode.ClassName = code.ClassName;
+                        //existingCode.Classes = classInfo.ValueOrDefault;
                     }
                     else
                     {
@@ -102,13 +119,15 @@ namespace shg.dynRunner.Infrastructure.Services
             if (getCompilationCode.IsSuccess)
             {
                 var compilationCode = getCompilationCode.Value;
+                //var classInfo = CodeCompiler.AnalyseClasses(compilationCode);
                 return Result.Ok<DynCompiledCode>(new DynCompiledCode
                 {
                     Identifier = code.Identifier,
-                    Code = compilationCode,
+                    CompiledCode = compilationCode,
                     CompilationTime = DateTime.Now,
                     ClassName = code.ClassName,
                     LastExecutionTime = code.UpdatedTime,
+                    //Classes = classInfo.ValueOrDefault
                 });
             }
             else
